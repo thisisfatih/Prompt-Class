@@ -11,9 +11,10 @@ type Question = {
     questionId: string;
     questionSentence: string;
     options: string | null; // semicolon-separated
-    answer: string;         // for MULTI_SELECT we store the single correct option as a string
+    answer: string;         // for MULTI_SELECT we store a single correct option as a string
     questionType: "TRUE_FALSE" | "MULTI_SELECT" | "SHORT_ANSWER";
 };
+
 type ApiCourseDetail = {
     course: { courseId: string; courseName: string };
     versions: { courseVersionId: string; version: number }[];
@@ -28,11 +29,14 @@ export default function PracticeRunPage() {
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<ApiCourseDetail | null>(null);
+
     const [i, setI] = useState(0);
     const [score, setScore] = useState(0);
     const [answered, setAnswered] = useState(false);
-    const [choice, setChoice] = useState<string>(""); // for inputs/radio
+    const [choice, setChoice] = useState<string>("");
+
     const [done, setDone] = useState(false);
+    const [countdown, setCountdown] = useState<number>(0); // auto-advance timer
 
     useEffect(() => {
         let isMounted = true;
@@ -42,7 +46,6 @@ export default function PracticeRunPage() {
                 if (!res.ok) throw new Error("Failed to load course");
                 const json: ApiCourseDetail = await res.json();
                 if (isMounted) {
-                    // shuffle questions lightly for fun? (optional)
                     setData(json);
                     setLoading(false);
                 }
@@ -51,7 +54,9 @@ export default function PracticeRunPage() {
                 setLoading(false);
             }
         })();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+        };
     }, [courseId]);
 
     const q = useMemo(() => (data ? data.questions[i] : null), [data, i]);
@@ -62,31 +67,64 @@ export default function PracticeRunPage() {
 
     const normalize = (s: string) => s.trim().toLowerCase();
 
+    const goNext = () => {
+        if (!data) return;
+        const next = i + 1;
+        if (next >= data.questions.length) {
+            setDone(true);
+            return;
+        }
+        setI(next);
+        setAnswered(false);
+        setChoice("");
+        setCountdown(0);
+    };
+
+    // Start a 5s countdown after answer is checked; auto-advance at 0
+    useEffect(() => {
+        if (!answered) return;
+        setCountdown(5);
+
+        let tick: ReturnType<typeof setInterval> | null = null;
+        let adv: ReturnType<typeof setTimeout> | null = null;
+
+        tick = setInterval(() => {
+            setCountdown((c) => {
+                if (c <= 1) {
+                    if (tick) clearInterval(tick);
+                    if (adv) clearTimeout(adv);
+                    // brief delay to let 0 render
+                    adv = setTimeout(() => goNext(), 100);
+                    return 0;
+                }
+                return c - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (tick) clearInterval(tick);
+            if (adv) clearTimeout(adv);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [answered]);
+
     const submit = () => {
         if (!q) return;
+
+        // Already answered: skip countdown and go next
         if (answered) {
-            // go next
-            const next = i + 1;
-            if (data && next >= data.questions.length) {
-                setDone(true);
-                toast.success("Finished!", { duration: 1200 });
-            } else {
-                setI(next);
-                setAnswered(false);
-                setChoice("");
-            }
+            goNext();
             return;
         }
 
-        // first submit
+        // First submit: check correctness
         let correct = false;
         if (q.questionType === "TRUE_FALSE") {
             correct = normalize(choice) === normalize(q.answer);
         } else if (q.questionType === "MULTI_SELECT") {
-            // we store a single correct option as string
-            correct = choice && normalize(choice) === normalize(q.answer);
+            correct = !!choice && normalize(choice) === normalize(q.answer);
         } else {
-            // SHORT_ANSWER: lenient compare
+            // SHORT_ANSWER
             correct = normalize(choice) === normalize(q.answer);
         }
 
@@ -97,13 +135,14 @@ export default function PracticeRunPage() {
         } else {
             toast.error("Not quite", { description: `Correct: ${q.answer}`, duration: 1600 });
         }
+        // countdown handled by useEffect
     };
-
-    const total = data?.questions.length ?? 0;
-    const progress = total ? Math.round(((i + (answered ? 1 : 0)) / total) * 100) : 0;
 
     if (loading) return <main className="p-4">Loading…</main>;
     if (!data) return <main className="p-4">Course not found.</main>;
+
+    const total = data.questions.length;
+    const progress = total ? Math.round(((i + (answered ? 1 : 0)) / total) * 100) : 0;
 
     if (done) {
         const pct = total ? Math.round((score / total) * 100) : 0;
@@ -117,10 +156,24 @@ export default function PracticeRunPage() {
                     </div>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                    <Button className="h-12 rounded-2xl" onClick={() => { setI(0); setScore(0); setAnswered(false); setChoice(""); setDone(false); }}>
+                    <Button
+                        className="h-12 rounded-2xl"
+                        onClick={() => {
+                            setI(0);
+                            setScore(0);
+                            setAnswered(false);
+                            setChoice("");
+                            setDone(false);
+                            setCountdown(0);
+                        }}
+                    >
                         Retake course
                     </Button>
-                    <Button variant="secondary" className="h-12 rounded-2xl" onClick={() => router.push("/practice")}>
+                    <Button
+                        variant="secondary"
+                        className="h-12 rounded-2xl"
+                        onClick={() => router.push("/practice")}
+                    >
                         Pick another course
                     </Button>
                 </div>
@@ -131,8 +184,12 @@ export default function PracticeRunPage() {
     return (
         <main className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-base font-semibold truncate max-w-[70%]">{data.course.courseName}</h1>
-                <div className="text-xs text-muted-foreground">Q {i + 1}/{total}</div>
+                <h1 className="text-base font-semibold truncate max-w-[70%]">
+                    {data.course.courseName}
+                </h1>
+                <div className="text-xs text-muted-foreground">
+                    Q {i + 1}/{total}
+                </div>
             </div>
 
             {/* progress bar */}
@@ -152,7 +209,7 @@ export default function PracticeRunPage() {
                                 key={opt}
                                 className={[
                                     "h-12 rounded-2xl border",
-                                    choice === opt ? "bg-black text-white border-black" : "bg-white"
+                                    choice === opt ? "bg-black text-white border-black" : "bg-white",
                                 ].join(" ")}
                                 onClick={() => setChoice(opt)}
                             >
@@ -169,7 +226,7 @@ export default function PracticeRunPage() {
                                 key={opt}
                                 className={[
                                     "h-12 rounded-2xl border text-left px-4",
-                                    choice === opt ? "bg-black text-white border-black" : "bg-white"
+                                    choice === opt ? "bg-black text-white border-black" : "bg-white",
                                 ].join(" ")}
                                 onClick={() => setChoice(opt)}
                             >
@@ -191,13 +248,22 @@ export default function PracticeRunPage() {
                 )}
 
                 <div className="pt-2">
-                    <Button
-                        onClick={submit}
-                        className="h-12 rounded-2xl w-full"
-                        disabled={!q}
-                    >
-                        {answered ? (i + 1 === total ? "Finish" : "Next") : "Check"}
+                    <Button onClick={submit} className="h-12 rounded-2xl w-full" disabled={!q}>
+                        {!answered
+                            ? "Check"
+                            : i + 1 === total
+                                ? countdown > 0
+                                    ? `Finish in ${countdown}s`
+                                    : "Finish"
+                                : countdown > 0
+                                    ? `Next in ${countdown}s`
+                                    : "Next"}
                     </Button>
+                    {answered && countdown > 0 && (
+                        <p className="text-[11px] text-muted-foreground text-center mt-1">
+                            Auto-advancing… tap to skip
+                        </p>
+                    )}
                 </div>
             </div>
         </main>
