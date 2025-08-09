@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import confetti from "canvas-confetti";
 
 type Question = {
     courseQuestionId: string;
@@ -66,12 +69,43 @@ export default function PracticeRunPage() {
     );
 
     const normalize = (s: string) => s.trim().toLowerCase();
+    const isSelected = (opt: string) => choice === opt;
+    const isCorrectOpt = (opt: string) =>
+        answered && normalize(opt) === normalize(q!.answer);
+
+    const optionClass = (opt: string) => {
+        if (answered) {
+            if (isCorrectOpt(opt)) return "bg-green-500 text-white border-green-500";
+            if (isSelected(opt)) return "bg-red-500 text-white border-red-500";
+            return "bg-white border-gray-300 text-gray-900";
+        } else {
+            if (isSelected(opt)) return "bg-primary text-primary-foreground border-primary";
+            return "bg-white border-gray-300 text-gray-900";
+        }
+    };
 
     const goNext = () => {
         if (!data) return;
         const next = i + 1;
         if (next >= data.questions.length) {
             setDone(true);
+
+            // ✅ success celebration
+            const percentage = Math.round((score / data.questions.length) * 100);
+            if (percentage >= 100) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.7 },
+                });
+            } else if (percentage >= 70) {
+                confetti({
+                    particleCount: 60,
+                    spread: 60,
+                    origin: { y: 0.7 },
+                });
+            }
+
             return;
         }
         setI(next);
@@ -80,10 +114,11 @@ export default function PracticeRunPage() {
         setCountdown(0);
     };
 
+
     // Start a 5s countdown after answer is checked; auto-advance at 0
     useEffect(() => {
         if (!answered) return;
-        setCountdown(5);
+        setCountdown(3);
 
         let tick: ReturnType<typeof setInterval> | null = null;
         let adv: ReturnType<typeof setTimeout> | null = null;
@@ -193,79 +228,90 @@ export default function PracticeRunPage() {
             </div>
 
             {/* progress bar */}
-            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-black transition-all" style={{ width: `${progress}%` }} />
-            </div>
+            <Progress value={progress} className="h-2 rounded-full" />
+
 
             {/* card */}
-            <div className="p-4 rounded-2xl border space-y-4">
-                <div className="text-base font-medium">{q?.questionSentence}</div>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={q?.courseQuestionId ?? i}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.18 }}
+                    className="glass p-4 rounded-2xl shadow-card space-y-4"
+                >
+                    <div className="text-base font-medium">{q?.questionSentence}</div>
 
-                {/* answer UI */}
-                {q?.questionType === "TRUE_FALSE" && (
-                    <div className="grid grid-cols-2 gap-3">
-                        {["True", "False"].map((opt) => (
-                            <button
-                                key={opt}
-                                className={[
-                                    "h-12 rounded-2xl border",
-                                    choice === opt ? "bg-black text-white border-black" : "bg-white",
-                                ].join(" ")}
-                                onClick={() => setChoice(opt)}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {q?.questionType === "MULTI_SELECT" && (
-                    <div className="grid grid-cols-1 gap-3">
-                        {options.map((opt) => (
-                            <button
-                                key={opt}
-                                className={[
-                                    "h-12 rounded-2xl border text-left px-4",
-                                    choice === opt ? "bg-black text-white border-black" : "bg-white",
-                                ].join(" ")}
-                                onClick={() => setChoice(opt)}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {q?.questionType === "SHORT_ANSWER" && (
-                    <div className="space-y-2">
-                        <Input
-                            placeholder="Type your answer…"
-                            value={choice}
-                            onChange={(e) => setChoice(e.target.value)}
-                            className="h-12 rounded-2xl"
-                        />
-                    </div>
-                )}
-
-                <div className="pt-2">
-                    <Button onClick={submit} className="h-12 rounded-2xl w-full" disabled={!q}>
-                        {!answered
-                            ? "Check"
-                            : i + 1 === total
-                                ? countdown > 0
-                                    ? `Finish in ${countdown}s`
-                                    : "Finish"
-                                : countdown > 0
-                                    ? `Next in ${countdown}s`
-                                    : "Next"}
-                    </Button>
-                    {answered && countdown > 0 && (
-                        <p className="text-[11px] text-muted-foreground text-center mt-1">
-                            Auto-advancing… tap to skip
-                        </p>
+                    {/* answer UI */}
+                    {q?.questionType === "TRUE_FALSE" && (
+                        <div className="grid grid-cols-2 gap-3">
+                            {["True", "False"].map((opt) => (
+                                <button
+                                    key={opt}
+                                    type="button"
+                                    onClick={() => !answered && setChoice(opt)}
+                                    className={[
+                                        "h-12 rounded-2xl border w-full transition-colors",
+                                        optionClass(opt)
+                                    ].join(" ")}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
                     )}
-                </div>
-            </div>
+
+                    {q?.questionType === "MULTI_SELECT" && (
+                        <div className="grid grid-cols-1 gap-3">
+                            {options.map((opt, i) => (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => !answered && setChoice(opt)}
+                                    className={[
+                                        "w-full h-12 rounded-2xl border px-4 text-left transition-colors",
+                                        optionClass(opt)
+                                    ].join(" ")}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {q?.questionType === "SHORT_ANSWER" && (
+                        <div className="space-y-2">
+                            <Input
+                                placeholder="Type your answer…"
+                                value={choice}
+                                onChange={(e) => setChoice(e.target.value)}
+                                className="h-12 rounded-2xl"
+                            />
+                        </div>
+                    )}
+
+                    <div className="pt-2">
+                        <Button onClick={submit} className="h-12 rounded-2xl w-full" disabled={!q}>
+                            {!answered
+                                ? "Check"
+                                : i + 1 === total
+                                    ? countdown > 0
+                                        ? `Finish in ${countdown}s`
+                                        : "Finish"
+                                    : countdown > 0
+                                        ? `Next in ${countdown}s`
+                                        : "Next"}
+                        </Button>
+                        {answered && countdown > 0 && (
+                            <p className="text-[11px] text-muted-foreground text-center mt-1">
+                                Auto-advancing… tap to skip
+                            </p>
+                        )}
+                    </div>
+                </motion.div>
+            </AnimatePresence>
+
         </main>
     );
 }

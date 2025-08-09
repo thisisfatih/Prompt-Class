@@ -82,7 +82,11 @@
 }
 
 body {
-  @apply bg-white text-gray-900;
+  @apply min-h-dvh text-gray-900;
+  background:
+    radial-gradient(1200px 600px at 100% -20%, #dbeafe 0%, transparent 60%),
+    radial-gradient(900px 600px at -10% 0%, #ede9fe 0%, transparent 60%),
+    #ffffff;
 }
 
 .dark {
@@ -126,4 +130,8 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.glass {
+  @apply bg-white/70 backdrop-blur-xl border border-white/60;
 }

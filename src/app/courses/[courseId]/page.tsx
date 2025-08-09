@@ -112,7 +112,11 @@ export default async function CourseDetailPage({
         ) : (
           <ul className="space-y-3">
             {data.questions.map((q, idx) => (
-              <li key={q.courseQuestionId} className="p-4 rounded-2xl border">
+              <li
+                key={q.courseQuestionId ?? q.questionId ?? idx}
+                className="p-4 rounded-2xl glass shadow-soft hover:shadow-card transition-shadow"
+              >
+
                 <div className="text-sm font-medium">
                   {idx + 1}. {q.questionSentence}
                 </div>
