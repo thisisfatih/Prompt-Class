@@ -26,12 +26,15 @@ export default async function CoursesPage() {
       <h1 className="text-xl font-semibold">Courses</h1>
       <ul className="space-y-3">
         {courses.map((c) => (
-          <li key={c.courseId}
-            className="p-4 rounded-2xl glass shadow-soft hover:shadow-card transition-shadow">
+          <li
+            key={c.courseId}
+            className="p-4 rounded-2xl glass shadow-soft hover:shadow-card transition-shadow"
+          >
             <Link href={`/courses/${c.courseId}`} className="block">
               <div className="text-base font-medium">{c.courseName}</div>
               <div className="text-xs text-muted-foreground">
-                by {c.courseCreator} • current v{c.currentVersion} (latest v{c.latestVersion})
+                by {c.courseCreator} • current v{c.currentVersion} (latest v
+                {c.latestVersion})
               </div>
             </Link>
           </li>

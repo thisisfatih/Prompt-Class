@@ -10,7 +10,7 @@ type Body = {
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ courseId: string }> }
+  ctx: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await ctx.params;
 

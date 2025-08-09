@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request, ctx: { params: Promise<{ courseId: string }> }) {
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ courseId: string }> },
+) {
   const { courseId } = await ctx.params;
   try {
     const url = new URL(req.url);
@@ -10,19 +13,28 @@ export async function GET(req: Request, ctx: { params: Promise<{ courseId: strin
 
     const course = await prisma.course.findUnique({
       where: { courseId },
-      include: { currentVersion: true, versions: { orderBy: { version: "desc" } } },
+      include: {
+        currentVersion: true,
+        versions: { orderBy: { version: "desc" } },
+      },
     });
-    if (!course) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!course)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const defaultVersion = course.currentVersion?.version ?? (course.versions[0]?.version ?? 1);
+    const defaultVersion =
+      course.currentVersion?.version ?? course.versions[0]?.version ?? 1;
     const selectedVersion = versionFromQuery ?? defaultVersion;
 
     const selectedVersionRow =
-      course.versions.find((v) => v.version === selectedVersion) ?? course.versions[0];
+      course.versions.find((v) => v.version === selectedVersion) ??
+      course.versions[0];
 
     const questions = selectedVersionRow
       ? await prisma.courseQuestion.findMany({
-          where: { courseId, courseVersionId: selectedVersionRow.courseVersionId },
+          where: {
+            courseId,
+            courseVersionId: selectedVersionRow.courseVersionId,
+          },
           include: { question: true },
           orderBy: { courseQuestionId: "asc" },
         })

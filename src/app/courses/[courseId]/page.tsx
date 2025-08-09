@@ -70,35 +70,41 @@ export default async function CourseDetailPage({
 
       {data.versions.length > 0 && (
         <div className="flex flex-col gap-2">
-          {[...data.versions].sort((a, b) => a.version - b.version).map((vrow) => {
-            const active = vrow.version === data.selectedVersion;
-            const isCurrent = vrow.version === (data.currentVersion ?? undefined);
+          {[...data.versions]
+            .sort((a, b) => a.version - b.version)
+            .map((vrow) => {
+              const active = vrow.version === data.selectedVersion;
+              const isCurrent =
+                vrow.version === (data.currentVersion ?? undefined);
 
-            return (
-              <div key={vrow.courseVersionId} className="flex items-center gap-2">
-                <Link
-                  href={`/courses/${data.course.courseId}?v=${vrow.version}`}
-                  className={[
-                    "px-3 py-1 rounded-full text-sm border",
-                    active ? "bg-black text-white border-black" : "bg-white"
-                  ].join(" ")}
+              return (
+                <div
+                  key={vrow.courseVersionId}
+                  className="flex items-center gap-2"
                 >
-                  v{vrow.version}
-                </Link>
+                  <Link
+                    href={`/courses/${data.course.courseId}?v=${vrow.version}`}
+                    className={[
+                      "px-3 py-1 rounded-full text-sm border",
+                      active ? "bg-black text-white border-black" : "bg-white",
+                    ].join(" ")}
+                  >
+                    v{vrow.version}
+                  </Link>
 
-                {isCurrent ? (
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    Current
-                  </span>
-                ) : (
-                  <MakeCurrentButton
-                    courseId={data.course.courseId}
-                    courseVersionId={vrow.courseVersionId}
-                  />
-                )}
-              </div>
-            );
-          })}
+                  {isCurrent ? (
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Current
+                    </span>
+                  ) : (
+                    <MakeCurrentButton
+                      courseId={data.course.courseId}
+                      courseVersionId={vrow.courseVersionId}
+                    />
+                  )}
+                </div>
+              );
+            })}
         </div>
       )}
 
@@ -116,7 +122,6 @@ export default async function CourseDetailPage({
                 key={q.courseQuestionId ?? q.questionId ?? idx}
                 className="p-4 rounded-2xl glass shadow-soft hover:shadow-card transition-shadow"
               >
-
                 <div className="text-sm font-medium">
                   {idx + 1}. {q.questionSentence}
                 </div>

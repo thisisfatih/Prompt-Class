@@ -9,8 +9,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
   // @ts-ignore (extra headers supported by OpenRouter)
   defaultHeaders: {
-    ...(process.env.OPENROUTER_SITE_URL ? { "HTTP-Referer": process.env.OPENROUTER_SITE_URL } : {}),
-    ...(process.env.OPENROUTER_APP_NAME ? { "X-Title": process.env.OPENROUTER_APP_NAME } : {}),
+    ...(process.env.OPENROUTER_SITE_URL
+      ? { "HTTP-Referer": process.env.OPENROUTER_SITE_URL }
+      : {}),
+    ...(process.env.OPENROUTER_APP_NAME
+      ? { "X-Title": process.env.OPENROUTER_APP_NAME }
+      : {}),
   },
 });
 
@@ -26,10 +30,16 @@ export async function POST(req: Request) {
     };
 
     if (!topic || !count) {
-      return NextResponse.json({ error: "Missing topic or count" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing topic or count" },
+        { status: 400 },
+      );
     }
     if (!process.env.OPENROUTER_API_KEY) {
-      return NextResponse.json({ error: "Missing OPENROUTER_API_KEY" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Missing OPENROUTER_API_KEY" },
+        { status: 500 },
+      );
     }
 
     const system = `
@@ -52,7 +62,8 @@ Use beginner-friendly wording; keep everything concise.
         type: "function",
         function: {
           name: "createCourse",
-          description: "Structured course payload for insertion into the database.",
+          description:
+            "Structured course payload for insertion into the database.",
           parameters: {
             type: "object",
             additionalProperties: false,
@@ -94,8 +105,22 @@ Use beginner-friendly wording; keep everything concise.
         { role: "system", content: system },
         { role: "user", content: user },
         // Optional gentle nudge if user provided overrides:
-        ...(courseName ? [{ role: "user" as const, content: `Use courseName exactly as: ${courseName}` }] : []),
-        ...(courseCreator ? [{ role: "user" as const, content: `Use creator exactly as: ${courseCreator}` }] : []),
+        ...(courseName
+          ? [
+              {
+                role: "user" as const,
+                content: `Use courseName exactly as: ${courseName}`,
+              },
+            ]
+          : []),
+        ...(courseCreator
+          ? [
+              {
+                role: "user" as const,
+                content: `Use creator exactly as: ${courseCreator}`,
+              },
+            ]
+          : []),
       ],
       tools,
       tool_choice: { type: "function", function: { name: "createCourse" } }, // FORCE function call
@@ -104,7 +129,10 @@ Use beginner-friendly wording; keep everything concise.
 
     const toolCall = completion.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall || toolCall.function.name !== "createCourse") {
-      return NextResponse.json({ error: "Model did not return structured function output" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Model did not return structured function output" },
+        { status: 500 },
+      );
     }
 
     const args = JSON.parse(toolCall.function.arguments || "{}") as {
@@ -119,8 +147,15 @@ Use beginner-friendly wording; keep everything concise.
     };
 
     // Final guards (count + shape)
-    if (!args.questions || !Array.isArray(args.questions) || args.questions.length < 1) {
-      return NextResponse.json({ error: "No questions produced" }, { status: 500 });
+    if (
+      !args.questions ||
+      !Array.isArray(args.questions) ||
+      args.questions.length < 1
+    ) {
+      return NextResponse.json(
+        { error: "No questions produced" },
+        { status: 500 },
+      );
     }
     const items = args.questions.slice(0, count);
 
@@ -128,25 +163,50 @@ Use beginner-friendly wording; keep everything concise.
     for (const q of items) {
       if (q.questionType === "MULTI_SELECT") {
         if (!q.options || q.options.length === 0) {
-          return NextResponse.json({ error: "MULTI_SELECT requires options" }, { status: 500 });
+          return NextResponse.json(
+            { error: "MULTI_SELECT requires options" },
+            { status: 500 },
+          );
         }
         if (!q.options.includes(q.answer)) {
-          return NextResponse.json({ error: "MULTI_SELECT answer must be one of options" }, { status: 500 });
+          return NextResponse.json(
+            { error: "MULTI_SELECT answer must be one of options" },
+            { status: 500 },
+          );
         }
       }
-      if (q.questionType === "TRUE_FALSE" && !["True", "False"].includes(q.answer)) {
-        return NextResponse.json({ error: "TRUE_FALSE answer must be 'True' or 'False'" }, { status: 500 });
+      if (
+        q.questionType === "TRUE_FALSE" &&
+        !["True", "False"].includes(q.answer)
+      ) {
+        return NextResponse.json(
+          { error: "TRUE_FALSE answer must be 'True' or 'False'" },
+          { status: 500 },
+        );
       }
     }
 
     // Apply UI overrides if provided
-    const finalName = (courseName?.trim() || args.courseName?.trim() || `${topic} — Basics`).slice(0, 200);
-    const finalCreator = (courseCreator?.trim() || args.creator?.trim() || "AI").slice(0, 100);
+    const finalName = (
+      courseName?.trim() ||
+      args.courseName?.trim() ||
+      `${topic} — Basics`
+    ).slice(0, 200);
+    const finalCreator = (
+      courseCreator?.trim() ||
+      args.creator?.trim() ||
+      "AI"
+    ).slice(0, 100);
 
     // Insert: course + v1 + questions; set current=v1
     const result = await prisma.$transaction(async (tx) => {
       const course = await tx.course.create({
-        data: { courseName: finalName, courseCreator: finalCreator, createdBy: finalCreator, updatedBy: finalCreator },
+        data: {
+          courseName: finalName,
+          courseCreator: finalCreator,
+          createdBy: finalCreator,
+          updatedBy: finalCreator,
+        },
       });
 
       const v1 = await tx.courseVersion.create({
@@ -183,6 +243,9 @@ Use beginner-friendly wording; keep everything concise.
     return NextResponse.json(result);
   } catch (e: any) {
     console.error(e);
-    return NextResponse.json({ error: e?.message ?? "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message ?? "Server error" },
+      { status: 500 },
+    );
   }
 }

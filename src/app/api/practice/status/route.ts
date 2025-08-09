@@ -5,11 +5,15 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const userId = url.searchParams.get("userId");
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   // 1) Get all courses with currentVersionId (fallback to latest if null)
   const courses = await prisma.course.findMany({
-    include: { currentVersion: true, versions: { orderBy: { version: "desc" }, take: 1 } },
+    include: {
+      currentVersion: true,
+      versions: { orderBy: { version: "desc" }, take: 1 },
+    },
   });
 
   // Build a map: courseId -> effective currentVersionId + totalQuestions
@@ -27,7 +31,7 @@ export async function GET(req: Request) {
         courseVersionId: ver.courseVersionId,
         totalQuestions: total,
       };
-    })
+    }),
   );
 
   const list = effective.filter(Boolean) as {
@@ -59,10 +63,11 @@ export async function GET(req: Request) {
   });
 
   // 3) Reduce to latest per courseId
-  const latestByCourse = new Map<string, typeof sessions[number]>();
+  const latestByCourse = new Map<string, (typeof sessions)[number]>();
   for (const s of sessions) {
     const prev = latestByCourse.get(s.courseId);
-    if (!prev || s.updatedAt > prev.updatedAt) latestByCourse.set(s.courseId, s);
+    if (!prev || s.updatedAt > prev.updatedAt)
+      latestByCourse.set(s.courseId, s);
   }
 
   // 4) Build payload
