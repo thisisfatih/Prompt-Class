@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
-export default {
-  darkMode: ["class"],
+import animate from "tailwindcss-animate";
+
+const config: Config = {
   content: ["./src/app/**/*.{ts,tsx}", "./src/components/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -10,11 +11,7 @@ export default {
         "2xl": "1.75rem",
       },
       colors: {
-        brand: {
-          DEFAULT: "#4F46E5", // indigo-600
-          fg: "#ffffff",
-          soft: "#EEF2FF",
-        },
+        brand: { DEFAULT: "#4F46E5", fg: "#ffffff", soft: "#EEF2FF" },
       },
       boxShadow: {
         soft: "0 6px 24px rgba(0,0,0,0.06)",
@@ -22,5 +19,6 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+  plugins: [animate], // <-- not require('tailwindcss-animate')
+};
+export default config;

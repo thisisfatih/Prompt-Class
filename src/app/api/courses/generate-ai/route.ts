@@ -4,18 +4,16 @@ import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
+const defaultHeaders: Record<string, string> = {};
+if (process.env.OPENROUTER_SITE_URL)
+  defaultHeaders["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL!;
+if (process.env.OPENROUTER_APP_NAME)
+  defaultHeaders["X-Title"] = process.env.OPENROUTER_APP_NAME!;
+
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY!,
-  // @ts-ignore (extra headers supported by OpenRouter)
-  defaultHeaders: {
-    ...(process.env.OPENROUTER_SITE_URL
-      ? { "HTTP-Referer": process.env.OPENROUTER_SITE_URL }
-      : {}),
-    ...(process.env.OPENROUTER_APP_NAME
-      ? { "X-Title": process.env.OPENROUTER_APP_NAME }
-      : {}),
-  },
+  defaultHeaders, // <-- now properly typed, no ts-ignore needed
 });
 
 const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { BookOpen, Plus, Sparkles, Play } from "lucide-react";
+import { BookOpen, Sparkles, Play } from "lucide-react";
 
 export default function NavBar() {
   const pathname = usePathname();
