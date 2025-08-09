@@ -16,8 +16,24 @@ model Course {
   createdBy     String
   updatedBy     String
 
-  versions  CourseVersion[]
+  // current version pointer (optional)
+  currentVersionId String?        @unique @db.Uuid // ← make it unique
+  currentVersion   CourseVersion? @relation("CurrentCourseVersion", fields: [currentVersionId], references: [courseVersionId])
+
+  versions  CourseVersion[]  @relation("CourseToVersions")
   questions CourseQuestion[]
+}
+
+model CourseVersion {
+  courseVersionId String @id @default(uuid()) @db.Uuid
+  courseId        String @db.Uuid
+  version         Int
+
+  course     Course           @relation("CourseToVersions", fields: [courseId], references: [courseId])
+  currentFor Course?          @relation("CurrentCourseVersion") // optional backref (can omit)
+  questions  CourseQuestion[]
+
+  @@unique([courseId, version])
 }
 
 model CourseQuestion {
@@ -45,15 +61,4 @@ enum QuestionType {
   TRUE_FALSE
   MULTI_SELECT
   SHORT_ANSWER
-}
-
-model CourseVersion {
-  courseVersionId String @id @default(uuid()) @db.Uuid
-  courseId        String @db.Uuid
-  version         Int
-
-  course    Course           @relation(fields: [courseId], references: [courseId])
-  questions CourseQuestion[]
-
-  @@unique([courseId, version])
 }

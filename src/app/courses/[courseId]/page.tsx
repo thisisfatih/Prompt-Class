@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { headers } from "next/headers";
+import { MakeCurrentButton } from "@/components/make-current-button";
 
 type ApiCourseDetail = {
   course: {
@@ -68,24 +69,36 @@ export default async function CourseDetailPage({
       </div>
 
       {data.versions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {[...data.versions]
-            .sort((a, b) => a.version - b.version)
-            .map((vrow) => {
-              const active = vrow.version === data.selectedVersion;
-              return (
+        <div className="flex flex-col gap-2">
+          {[...data.versions].sort((a, b) => a.version - b.version).map((vrow) => {
+            const active = vrow.version === data.selectedVersion;
+            const isCurrent = vrow.version === (data.currentVersion ?? undefined);
+
+            return (
+              <div key={vrow.courseVersionId} className="flex items-center gap-2">
                 <Link
-                  key={vrow.courseVersionId}
                   href={`/courses/${data.course.courseId}?v=${vrow.version}`}
                   className={[
                     "px-3 py-1 rounded-full text-sm border",
-                    active ? "bg-black text-white border-black" : "bg-white",
+                    active ? "bg-black text-white border-black" : "bg-white"
                   ].join(" ")}
                 >
                   v{vrow.version}
                 </Link>
-              );
-            })}
+
+                {isCurrent ? (
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Current
+                  </span>
+                ) : (
+                  <MakeCurrentButton
+                    courseId={data.course.courseId}
+                    courseVersionId={vrow.courseVersionId}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -128,7 +141,7 @@ export default async function CourseDetailPage({
 
       <div className="pt-2">
         <Link
-          href={`/generate`}
+          href={`/courses/${data.course.courseId}/add-question`}
           className="inline-flex items-center justify-center h-12 w-full rounded-2xl border"
         >
           Add more questions

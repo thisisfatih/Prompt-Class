@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const courseSchema = z.object({
   courseName: z.string().min(2),
@@ -221,10 +222,19 @@ function Step3({
         method: "POST",
       });
       if (!res.ok) throw new Error("Failed to publish");
-      alert("Course published!");
-      router.push("/courses"); // ⬅ redirect to table
+
+      toast.success("Course published!", {
+        description: "You can now view it in Courses.",
+        duration: 3000,
+      });
+
+      setTimeout(() => {
+        router.push("/courses");
+      }, 800);
     } catch (e) {
-      alert((e as Error).message);
+      toast.error("Error publishing course", {
+        description: (e as Error).message,
+      });
     } finally {
       setPublishing(false);
     }

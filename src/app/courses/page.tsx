@@ -8,6 +8,7 @@ type ApiCourse = {
   courseCreator: string;
   createdAt: string;
   latestVersion: number;
+  currentVersion: number; // NEW
 };
 
 export default async function CoursesPage() {
@@ -30,6 +31,9 @@ export default async function CoursesPage() {
               <div className="text-base font-medium">{c.courseName}</div>
               <div className="text-xs text-muted-foreground">
                 by {c.courseCreator} • v{c.latestVersion}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                by {c.courseCreator} • current v{c.currentVersion} (latest v{c.latestVersion})
               </div>
             </Link>
           </li>
