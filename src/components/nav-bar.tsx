@@ -26,15 +26,12 @@ export default function NavBar() {
             )}
             <Link href="/" className="inline-flex items-center gap-2 font-semibold">
               <Sparkles className="h-4 w-4 text-brand" />
-              prompt-class
+              PC
             </Link>
           </div>
           <div className="flex items-center gap-3 text-sm">
             <Link href="/courses" className="inline-flex items-center gap-1 hover:underline opacity-90">
               <BookOpen className="h-4 w-4" /> Courses
-            </Link>
-            <Link href="/generate" className="inline-flex items-center gap-1 hover:underline opacity-90">
-              <Plus className="h-4 w-4" /> Generate
             </Link>
             <Link href="/practice" className="inline-flex items-center gap-1 hover:underline opacity-90">
               <Play className="h-4 w-4" /> Practice

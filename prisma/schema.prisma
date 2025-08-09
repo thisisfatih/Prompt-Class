@@ -20,8 +20,9 @@ model Course {
   currentVersionId String?        @unique @db.Uuid // ← make it unique
   currentVersion   CourseVersion? @relation("CurrentCourseVersion", fields: [currentVersionId], references: [courseVersionId])
 
-  versions  CourseVersion[]  @relation("CourseToVersions")
-  questions CourseQuestion[]
+  versions        CourseVersion[]   @relation("CourseToVersions")
+  questions       CourseQuestion[]
+  PracticeSession PracticeSession[]
 }
 
 model CourseVersion {
@@ -29,9 +30,10 @@ model CourseVersion {
   courseId        String @db.Uuid
   version         Int
 
-  course     Course           @relation("CourseToVersions", fields: [courseId], references: [courseId])
-  currentFor Course?          @relation("CurrentCourseVersion") // optional backref (can omit)
-  questions  CourseQuestion[]
+  course          Course            @relation("CourseToVersions", fields: [courseId], references: [courseId])
+  currentFor      Course?           @relation("CurrentCourseVersion") // optional backref (can omit)
+  questions       CourseQuestion[]
+  PracticeSession PracticeSession[]
 
   @@unique([courseId, version])
 }
@@ -61,4 +63,36 @@ enum QuestionType {
   TRUE_FALSE
   MULTI_SELECT
   SHORT_ANSWER
+}
+
+model User {
+  userId    String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  sessions PracticeSession[]
+}
+
+enum PracticeStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model PracticeSession {
+  sessionId       String         @id @default(uuid()) @db.Uuid
+  userId          String         @db.Uuid
+  courseId        String         @db.Uuid
+  courseVersionId String         @db.Uuid
+  currentIndex    Int            @default(0)
+  correctCount    Int            @default(0)
+  totalQuestions  Int
+  status          PracticeStatus @default(IN_PROGRESS)
+  createdAt       DateTime       @default(now()) @db.Timestamptz()
+  updatedAt       DateTime       @updatedAt @db.Timestamptz()
+
+  user    User          @relation(fields: [userId], references: [userId])
+  course  Course        @relation(fields: [courseId], references: [courseId])
+  version CourseVersion @relation(fields: [courseVersionId], references: [courseVersionId])
+
+  @@index([userId, courseId, courseVersionId, status])
 }
