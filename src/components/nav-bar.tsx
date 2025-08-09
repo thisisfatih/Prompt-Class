@@ -40,9 +40,6 @@ export default function NavBar() {
         <Link href="/courses" className="hover:underline">
           Courses
         </Link>
-        <Link href="/generate" className="hover:underline">
-          Generate
-        </Link>
       </div>
     </nav>
   );

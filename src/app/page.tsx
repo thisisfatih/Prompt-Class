@@ -13,6 +13,9 @@ export default function HomePage() {
             <Button asChild size="lg" className="h-12 rounded-2xl"><Link href="/courses">Courses</Link></Button>
             <Button asChild variant="secondary" size="lg" className="h-12 rounded-2xl"><Link href="/generate">Generate a new course</Link></Button>
             <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl"><Link href="/generate-ai">Generate course with AI</Link></Button>
+            <Button asChild variant="outline" size="lg" className="h-12 rounded-2xl">
+              <Link href="/practice">Take a course</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
