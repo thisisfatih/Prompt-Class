@@ -21,7 +21,6 @@ const openai = new OpenAI({
 
 const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
-// Handle POST requests
 export async function POST(req: Request) {
   try {
     const { topic, count, courseName, courseCreator } = (await req.json()) as {
@@ -46,20 +45,19 @@ export async function POST(req: Request) {
     }
 
     const system = `
-    You generate study courses as structured data for a database.
-    You MUST return data ONLY via the provided function (tool) with VALID JSON arguments.
-    Constraints for each question:
-    - Use key "questionSentence" (not "question").
-    - questionType must be one of: TRUE_FALSE | MULTI_SELECT | SHORT_ANSWER.
-    - For TRUE_FALSE, answer must be "True" or "False" (string).
-    - For MULTI_SELECT, include "options" (array of 3-6 concise strings) and set "answer" to EXACTLY ONE of those options (string, not array).
-    - For SHORT_ANSWER, "answer" is a concise string (<= 80 chars).
-    Use beginner-friendly wording; keep everything concise.
-    `.trim();
+You generate study courses as structured data for a database.
+You MUST return data ONLY via the provided function (tool) with VALID JSON arguments.
+Constraints for each question:
+- Use key "questionSentence" (not "question").
+- questionType must be one of: TRUE_FALSE | MULTI_SELECT | SHORT_ANSWER.
+- For TRUE_FALSE, answer must be "True" or "False" (string).
+- For MULTI_SELECT, include "options" (array of 3-6 concise strings) and set "answer" to EXACTLY ONE of those options (string, not array).
+- For SHORT_ANSWER, "answer" is a concise string (<= 80 chars).
+Use beginner-friendly wording; keep everything concise.
+`.trim();
 
     const user = `Create a course on "${topic}" with exactly ${count} questions.`;
 
-    // Define the function tool schema
     const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       {
         type: "function",
@@ -102,28 +100,29 @@ export async function POST(req: Request) {
       },
     ];
 
+    // ✅ Build messages explicitly so `role` stays a string-literal type
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ];
+
+    if (courseName) {
+      messages.push({
+        role: "user",
+        content: `Use courseName exactly as: ${courseName}`,
+      });
+    }
+
+    if (courseCreator) {
+      messages.push({
+        role: "user",
+        content: `Use creator exactly as: ${courseCreator}`,
+      });
+    }
+
     const completion = await openai.chat.completions.create({
       model: MODEL,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-        ...(courseName
-          ? [
-              {
-                role: "user",
-                content: `Use courseName exactly as: ${courseName}`,
-              },
-            ]
-          : []),
-        ...(courseCreator
-          ? [
-              {
-                role: "user",
-                content: `Use creator exactly as: ${courseCreator}`,
-              },
-            ]
-          : []),
-      ],
+      messages,
       tools,
       tool_choice: { type: "function", function: { name: "createCourse" } },
       temperature: 0.3,
@@ -163,7 +162,7 @@ export async function POST(req: Request) {
 
     for (const q of items) {
       if (q.questionType === "MULTI_SELECT") {
-        if (!q.options || q.options.length === 0) {
+        if (!q.options?.length) {
           return NextResponse.json(
             { error: "MULTI_SELECT requires options" },
             { status: 500 },
@@ -241,7 +240,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (e: Error) {
+  } catch (e: any) {
     console.error(e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
