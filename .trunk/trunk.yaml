@@ -26,9 +26,8 @@ lint:
     - svgo@4.0.0
     - trufflehog@3.90.3
 actions:
-  disabled:
+  enabled:
     - trunk-announce
     - trunk-check-pre-push
     - trunk-fmt-pre-commit
-  enabled:
     - trunk-upgrade-available
