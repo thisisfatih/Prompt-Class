@@ -240,11 +240,16 @@ Use beginner-friendly wording; keep everything concise.
     });
 
     return NextResponse.json(result);
-  } catch (e: any) {
-    console.error(e);
-    return NextResponse.json(
-      { error: e?.message ?? "Server error" },
-      { status: 500 },
-    );
+  } catch (err: unknown) {
+    console.error(err);
+
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+          ? err
+          : "Server error";
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
