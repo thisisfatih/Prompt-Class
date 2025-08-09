@@ -1,4 +1,3 @@
-````markdown
 # AI Course Builder & Practice Platform
 
 A full-stack **Next.js 14 App Router** application that lets users generate, manage, and practice training courses in a Duolingo-style interface.  
@@ -51,7 +50,6 @@ git clone <repo-url>
 cd <repo-name>
 pnpm install
 ```
-````
 
 ### 2. Set Environment Variables
 
@@ -152,7 +150,3 @@ When generating a course via AI:
 ## 📜 License
 
 MIT
-
-```
-
-```
