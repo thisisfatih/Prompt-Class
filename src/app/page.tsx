@@ -6,7 +6,7 @@ import { BookOpen, PlusCircle, Bot, Play } from "lucide-react";
 export default function HomePage() {
   return (
     <main className="space-y-6">
-      <h1 className="text-2xl font-semibold">Prompt Class</h1>
+      <h1 className="text-2xl font-semibold">PromptClass</h1>
       <Card className="glass rounded-2xl shadow-card">
         <CardContent className="p-5 space-y-4">
           <p className="text-sm text-gray-600">
