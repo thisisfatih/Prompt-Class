@@ -4,20 +4,24 @@ import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
+// Default headers
 const defaultHeaders: Record<string, string> = {};
-if (process.env.OPENROUTER_SITE_URL)
-  defaultHeaders["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL!;
-if (process.env.OPENROUTER_APP_NAME)
-  defaultHeaders["X-Title"] = process.env.OPENROUTER_APP_NAME!;
+if (process.env.OPENROUTER_SITE_URL) {
+  defaultHeaders["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL;
+}
+if (process.env.OPENROUTER_APP_NAME) {
+  defaultHeaders["X-Title"] = process.env.OPENROUTER_APP_NAME;
+}
 
 const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY!,
-  defaultHeaders, // <-- now properly typed, no ts-ignore needed
+  defaultHeaders,
 });
 
 const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
+// Handle POST requests
 export async function POST(req: Request) {
   try {
     const { topic, count, courseName, courseCreator } = (await req.json()) as {
@@ -33,6 +37,7 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
     if (!process.env.OPENROUTER_API_KEY) {
       return NextResponse.json(
         { error: "Missing OPENROUTER_API_KEY" },
@@ -41,20 +46,20 @@ export async function POST(req: Request) {
     }
 
     const system = `
-You generate study courses as structured data for a database.
-You MUST return data ONLY via the provided function (tool) with VALID JSON arguments.
-Constraints for each question:
-- Use key "questionSentence" (not "question").
-- questionType must be one of: TRUE_FALSE | MULTI_SELECT | SHORT_ANSWER.
-- For TRUE_FALSE, answer must be "True" or "False" (string).
-- For MULTI_SELECT, include "options" (array of 3-6 concise strings) and set "answer" to EXACTLY ONE of those options (string, not array).
-- For SHORT_ANSWER, "answer" is a concise string (<= 80 chars).
-Use beginner-friendly wording; keep everything concise.
-`.trim();
+    You generate study courses as structured data for a database.
+    You MUST return data ONLY via the provided function (tool) with VALID JSON arguments.
+    Constraints for each question:
+    - Use key "questionSentence" (not "question").
+    - questionType must be one of: TRUE_FALSE | MULTI_SELECT | SHORT_ANSWER.
+    - For TRUE_FALSE, answer must be "True" or "False" (string).
+    - For MULTI_SELECT, include "options" (array of 3-6 concise strings) and set "answer" to EXACTLY ONE of those options (string, not array).
+    - For SHORT_ANSWER, "answer" is a concise string (<= 80 chars).
+    Use beginner-friendly wording; keep everything concise.
+    `.trim();
 
     const user = `Create a course on "${topic}" with exactly ${count} questions.`;
 
-    // Define a single function (tool) that encodes our exact schema
+    // Define the function tool schema
     const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       {
         type: "function",
@@ -85,7 +90,7 @@ Use beginner-friendly wording; keep everything concise.
                       type: "array",
                       items: { type: "string" },
                     },
-                    answer: { type: "string" }, // ALWAYS a string
+                    answer: { type: "string" },
                   },
                   required: ["questionSentence", "questionType", "answer"],
                 },
@@ -102,11 +107,10 @@ Use beginner-friendly wording; keep everything concise.
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
-        // Optional gentle nudge if user provided overrides:
         ...(courseName
           ? [
               {
-                role: "user" as const,
+                role: "user",
                 content: `Use courseName exactly as: ${courseName}`,
               },
             ]
@@ -114,14 +118,14 @@ Use beginner-friendly wording; keep everything concise.
         ...(courseCreator
           ? [
               {
-                role: "user" as const,
+                role: "user",
                 content: `Use creator exactly as: ${courseCreator}`,
               },
             ]
           : []),
       ],
       tools,
-      tool_choice: { type: "function", function: { name: "createCourse" } }, // FORCE function call
+      tool_choice: { type: "function", function: { name: "createCourse" } },
       temperature: 0.3,
     });
 
@@ -144,7 +148,6 @@ Use beginner-friendly wording; keep everything concise.
       }>;
     };
 
-    // Final guards (count + shape)
     if (
       !args.questions ||
       !Array.isArray(args.questions) ||
@@ -155,9 +158,9 @@ Use beginner-friendly wording; keep everything concise.
         { status: 500 },
       );
     }
+
     const items = args.questions.slice(0, count);
 
-    // Optional strict checks for MULTI_SELECT
     for (const q of items) {
       if (q.questionType === "MULTI_SELECT") {
         if (!q.options || q.options.length === 0) {
@@ -184,19 +187,18 @@ Use beginner-friendly wording; keep everything concise.
       }
     }
 
-    // Apply UI overrides if provided
     const finalName = (
       courseName?.trim() ||
       args.courseName?.trim() ||
       `${topic} — Basics`
     ).slice(0, 200);
+
     const finalCreator = (
       courseCreator?.trim() ||
       args.creator?.trim() ||
       "AI"
     ).slice(0, 100);
 
-    // Insert: course + v1 + questions; set current=v1
     const result = await prisma.$transaction(async (tx) => {
       const course = await tx.course.create({
         data: {
@@ -215,8 +217,8 @@ Use beginner-friendly wording; keep everything concise.
         const createdQ = await tx.question.create({
           data: {
             questionSentence: q.questionSentence,
-            answer: q.answer, // always a string now
-            options: q.options && q.options.length ? q.options.join(";") : null,
+            answer: q.answer,
+            options: q.options?.length ? q.options.join(";") : null,
             questionType: q.questionType,
           },
         });
