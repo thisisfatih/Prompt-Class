@@ -239,7 +239,7 @@ Use beginner-friendly wording; keep everything concise.
     });
 
     return NextResponse.json(result);
-  } catch (e: any) {
+  } catch (e: Error) {
     console.error(e);
     return NextResponse.json(
       { error: e?.message ?? "Server error" },
